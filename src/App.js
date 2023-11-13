@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import "./App.css";
 
 import Input from "./components/Input";
@@ -7,42 +7,51 @@ import Switcher from "./components/Switcher";
 import TodoItem from "./components/TodoItem";
 import Clear from "./components/Clear";
 
-function App() {
-  const [newTodoTitle, setNewTodoTitle] = useState("");
-  const [newDescription, setNewDescription] = useState("");
-  const [allTodos, setAllTodos] = useState([]);
-  const [completedTodos, setCompletedTodos] = useState([]);
-  const [isCompletedScreen, setIsCompletedScreen] = useState(false);
-
-  useEffect(() => {
-    const fetchTodos = async () => {
-      await fetch("https://jsonplaceholder.typicode.com/todos")
-        .then((res) => res.json())
-        .then((res) => console.log(res));
+class App extends React.Component {
+  constructor() {
+    super();
+    this.state = {
+      allTodos: [],
+      completedTodos: [],
+      newDescription: "",
+      newTodoTitle: "",
+      isCompletedScreen: false,
     };
-    fetchTodos();
-  }, []);
+  }
 
-  const handleAddNewTodo = () => {
-    if (newDescription && newTodoTitle) {
+  fetchTodos = async () => {
+    await fetch("https://jsonplaceholder.typicode.com/todos")
+      .then((res) => res.json())
+      .then((res) => console.log(res));
+  };
+
+  componentDidMount() {
+    this.fetchTodos();
+  }
+
+  handleAddNewTodo = () => {
+    if (this.state.newDescription && this.state.newTodoTitle) {
       const date = new Date();
       let newTodoObj = {
         id: date.getMilliseconds(),
-        title: newTodoTitle,
-        description: newDescription,
+        title: this.state.newTodoTitle,
+        description: this.state.newDescription,
       };
 
-      let updatedTodoArr = [...allTodos];
+      let updatedTodoArr = [...this.state.allTodos];
       updatedTodoArr.push(newTodoObj);
 
-      setAllTodos(updatedTodoArr);
-
-      setNewTodoTitle("");
-      setNewDescription("");
+      this.setState({
+        allTodos: updatedTodoArr,
+      });
+      this.setState({
+        newDescription: "",
+        newTodoTitle: "",
+      });
     }
   };
 
-  const handleCommit = (index) => {
+  handleCommit = (index) => {
     const date = new Date();
     let dd = date.getDate();
     let mm = date.getMonth();
@@ -50,95 +59,125 @@ function App() {
     let hh = date.getHours();
     let minutes = date.getMinutes();
     let ss = date.getSeconds();
-    let finalDate = `${dd}-${mm}-${yyyy} at ${hh}:${minutes}:${ss}`;
+    let finalDate = dd + "-" + mm + "-" + yyyy + "-" + " at" + hh + ":" + minutes + ":" + ss;
+
     let filteredTodo = {
-      ...allTodos.find((item) => item.id === index),
+      ...this.state.allTodos.find((item) => item.id === index),
       completed_at: finalDate,
     };
 
-    let updatedList = [...completedTodos, filteredTodo];
-    console.log(updatedList);
-    setCompletedTodos(updatedList);
+    let updatedList = [...this.state.completedTodos, filteredTodo];
 
-    handleDeleteTodo(index);
+    this.setState({
+      completedTodos: updatedList,
+    });
+    this.handleDeleteTodo(index);
   };
 
-  const handleReturnToToDoClick = (index) => {
-    let todo = { ...completedTodos.find((item) => item.id === index) };
-    setAllTodos([...allTodos, todo]);
-    setCompletedTodos(completedTodos.filter((item) => item.id !== index));
+  handleToDo = (index) => {
+    let todo = {
+      ...this.state.completedTodos.find((item) => item.id === index),
+    };
+    this.setState({
+      allTodos: [...this.state.allTodos, todo],
+    });
+
+    this.handleDeleteCompletedTodo(index);
   };
 
-  const handleDeleteTodo = (id) => {
-    setAllTodos(allTodos.filter((item, index) => item.id !== id));
+  handleDeleteTodo = (id) => {
+    this.setState({
+      allTodos: this.state.allTodos.filter((item, index) => item.id !== id),
+    });
+  };
+  handleDeleteCompletedTodo = (id) => {
+    this.setState({
+      completedTodos: this.state.completedTodos.filter((item, index) => item.id !== id),
+    });
   };
 
-  const handleDeleteCompletedTodo = (id) => {
-    setCompletedTodos(completedTodos.filter((item, index) => item.id !== id));
+  handleClear = () => {
+    this.setState({
+      allTodos: [],
+    });
   };
 
-  const handleClear = () => {
-    setAllTodos([]);
+  handleChangeNewTodoTitle = (value) => {
+    this.setState({
+      newTodoTitle: value,
+    });
+  };
+  handleChangeNewDescription = (value) => {
+    this.setState({
+      newDescription: value,
+    });
   };
 
-  return (
-    <div className="App">
-      <h1>My Todos</h1>
-      <div className="todo-wrapper">
-        <div className="todo-input">
-          <Input
-            value={newTodoTitle}
-            setValue={setNewTodoTitle}
-            name={"Title"}
-            description={"What's the title of your To Do?"}
-          />
-          <Input
-            value={newDescription}
-            setValue={setNewDescription}
-            name={"Description"}
-            description={"What's the description of your To Do?"}
-          />
-          <Button onClick={handleAddNewTodo} />
-        </div>
-        <div className="clear-wrapper">
-          <Clear handleClear={handleClear} />
-          <Switcher
-            isCompletedScreen={isCompletedScreen}
-            setIsCompletedScreen={setIsCompletedScreen}
-          />
-        </div>
-        <div className="todo-list">
-          {isCompletedScreen === true
-            ? completedTodos?.map((item, index) => (
-              <TodoItem
-                handleCommit={handleReturnToToDoClick}
-                key={index}
-                index={index}
-                handleDeleteTodo={handleDeleteCompletedTodo}
-                handleReturnToToDoClick={handleReturnToToDoClick}
-                id={item.id}
-                isCompletedScreen={isCompletedScreen}
-                todoTitle={item.title}
-                todoDescription={item.description}
-              />
-            ))
-            : allTodos.map((item, index) => (
-              <TodoItem
-                handleCommit={handleCommit}
-                key={index}
-                index={index}
-                handleDeleteTodo={handleDeleteTodo}
-                handleReturnToToDoClick={handleReturnToToDoClick}
-                isCompletedScreen={isCompletedScreen}
-                id={item.id}
-                todoTitle={item.title}
-                todoDescription={item.description}
-              />
-            ))}
+  handleChangeCompleted = (value) => {
+    this.setState({
+      isCompletedScreen: value,
+    });
+  };
+
+  render() {
+    return (
+      <div className="App">
+        <h1>My Todos</h1>
+        <div className="todo-wrapper">
+          <div className="todo-input">
+            <Input
+              value={this.state.newTodoTitle}
+              setValue={this.handleChangeNewTodoTitle}
+              name={"Title"}
+              description={"What's the title of your To Do?"}
+            />
+            <Input
+              value={this.state.newDescription}
+              setValue={this.handleChangeNewDescription}
+              name={"Description"}
+              description={"What's the description of your To Do?"}
+            />
+            <Button onCLick={this.handleAddNewTodo} />
+          </div>
+          <div className="clear-wrapper">
+            <Clear handleClear={this.handleClear} />
+            <Switcher
+              isCompletedScreen={this.state.isCompletedScreen}
+              setIsCompletedScreen={this.handleChangeCompleted}
+            />
+          </div>
+          <div className="todo-list">
+            {this.state.isCompletedScreen === true
+              ? this.state.completedTodos?.map((item, index) => (
+                  <TodoItem
+                    handleCommit={this.handleToDo}
+                    key={index}
+                    index={index}
+                    handleDeleteTodo={this.handleDeleteCompletedTodo}
+                    id={item.id}
+                    isCompletedScreen={this.state.isCompletedScreen}
+                    todoTitle={item.title}
+                    todoDescription={item.description}
+                  />
+                ))
+              : this.state.allTodos.map((item, index) => (
+                  <TodoItem
+                    handleCommit={this.handleCommit}
+                    key={index}
+                    index={index}
+                    handleDeleteTodo={this.handleDeleteTodo}
+                    isCompletedScreen={this.state.isCompletedScreen}
+                    id={item.id}
+                    todoTitle={item.title}
+                    todoDescription={item.description}
+                  />
+                ))}
+            {/* <TodoItem title="Task2" description="to do homework2" /> */}
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  }
 }
 
 export default App;
